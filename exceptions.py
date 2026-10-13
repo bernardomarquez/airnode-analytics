@@ -1,5 +1,5 @@
 class AirportOperationsError(Exception):
-    """Excepción base para todos los errores del sistema AirNode."""
+    """Base exception for all AirNode system errors."""
     def __init__(self, message: str, code: int = 500):
         super().__init__(message)
         self.message = message
@@ -10,21 +10,21 @@ class AirportOperationsError(Exception):
 
 
 class GateCapacityExceededError(AirportOperationsError):
-    """Se dispara cuando una terminal se queda sin puertas disponibles."""
+    """Raised when a terminal runs out of available gates."""
     def __init__(self, terminal_name: str, flight_id: str):
-        message = f"Terminal '{terminal_name}' llena. Imposible asignar puerta al vuelo '{flight_id}'."
+        message = f"Terminal '{terminal_name}' is full. Unable to assign gate for flight '{flight_id}'."
         super().__init__(message, code=401)
 
 
 class RunwayOccupiedError(AirportOperationsError):
-    """Se dispara si hay un conflicto de horarios en pista."""
+    """Raised if there is a scheduling conflict on a runway."""
     def __init__(self, runway_id: str, timestamp: str):
-        message = f"Pista '{runway_id}' ocupada en la franja horaria: {timestamp}."
+        message = f"Runway '{runway_id}' is occupied at time slot: {timestamp}."
         super().__init__(message, code=402)
 
 
 class InvalidScheduleFormatError(AirportOperationsError):
-    """Error al procesar la estructura de un archivo de vuelos."""
+    """Raised when processing an invalid flight schedule file structure."""
     def __init__(self, file_path: str, line_num: int):
-        message = f"Formato inválido en '{file_path}' (Línea {line_num} por favor)."
+        message = f"Invalid format in '{file_path}' at line {line_num}."
         super().__init__(message, code=403)
