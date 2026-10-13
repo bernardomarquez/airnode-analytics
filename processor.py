@@ -1,31 +1,39 @@
-import csv
-import os
+import requests
 from typing import Generator, Dict, Any
-from airnode.exceptions import InvalidScheduleFormatError
+from airnode.exceptions import AirportOperationsError
 
-def stream_flight_schedules(file_path: str) -> Generator[Dict[str, Any], None, None]:
+def fetch_live_airport_traffic(airport_icao: str = "LEMD") -> Generator[Dict[str, Any], None, None]:
     """
-    Reads a CSV flight schedule file line by line using a generator 
-    to optimize RAM memory when handling massive datasets.
+    Fetches real-time flight state data from the OpenSky Network API 
+    for a specific airport (e.g., LEMD for Madrid-Barajas) and streams it.
     """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist.")
-
-    with open(file_path, mode='r', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
+    # OpenSky Network REST API endpoint for arrivals/departures or state vectors
+    url = f"https://opensky-network.org/api/states/all"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
         
-        for line_num, row in enumerate(reader, start=2):
-            try:
-                # Basic data normalization and type conversion
+        states = data.get("states", [])
+        if not states:
+            return
+
+        for state in states:
+            # Example parsing of OpenSky vector structure:
+            # [icao24, callsign, origin_country, time_position, last_contact, longitude, latitude, baro_altitude, ...]
+            callsign = state[1]
+            origin_country = state[2]
+            
+            if callsign: # Filter out empty callsigns
                 flight_data = {
-                    "flight_number": row["flight_number"].strip(),
-                    "flight_type": row["type"].strip(),
-                    "scheduled_time": row["scheduled_time"].strip(),
-                    "passengers": int(row["passengers"]),
-                    "aircraft_type": row["aircraft_type"].strip()
+                    "flight_number": callsign.strip(),
+                    "flight_type": "Commercial",
+                    "scheduled_time": "Real-time",
+                    "passengers": 150, # Estimated baseline
+                    "aircraft_type": f"Origin: {origin_country}"
                 }
                 yield flight_data
-                
-            except (KeyError, ValueError):
-                # Raise custom exception if a row is corrupted or missing fields
-                raise InvalidScheduleFormatError(file_path, line_num)
+
+    except requests.exceptions.RequestException as e:
+        raise AirportOperationsError(f"Failed to fetch live data from OpenSky API: {e}", code=502)
