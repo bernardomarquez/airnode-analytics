@@ -33,6 +33,7 @@ class CommercialPassengerFlight(Flight):
     super().__init__(flight_number, airline, scheduled_time)
     self.passengers = passengers
     self.aircraft_type = aircraft_type
+    
     # Encapsulated carbon footprint attribute (private via name mangling)
     self.__carbon_emissions_kg = self._calculate_baseline_emissions()
 
