@@ -15,14 +15,11 @@ def calculate_turnaround_delay(scheduled_time: str, actual_time: str) -> int:
     delta = actual - sched
     return int(delta.total_seconds() / 60)
   except (ValueError, TypeError):
-    return 0  # Fallback if format is real-time or unparseable
+    return 0
 
 
 def get_peak_day_projection(year: int, month: int) -> str:
-  """Uses the calendar module to project seasonal traffic patterns
-
-  and identify the busiest operational day-of-the-week framework.
-  """
+  """Uses the calendar module to project seasonal traffic patterns."""
   cal = calendar.monthcalendar(year, month)
   return f"Month {month}/{year} has {len(cal)} operational weeks scheduled."
 
