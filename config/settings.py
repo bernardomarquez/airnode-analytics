@@ -3,7 +3,7 @@ import os
 
 # DIRECTORIOS
 
-# Directorio raíz del proyecto
+# Directorio principal del proyecto
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Código ICAO del aeropuerto de referencia
