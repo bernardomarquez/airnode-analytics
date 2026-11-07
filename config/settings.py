@@ -45,3 +45,5 @@ GATE_BUFFER_TIME = 15
 # Duración estimada de ocupación de una puerta (minutos)
 DEFAULT_TURNAROUND_TIME = 60
 
+# Intervalo entre capturas automáticas (segundos)
+COLLECTION_INTERVAL = 300  # 5 minutos

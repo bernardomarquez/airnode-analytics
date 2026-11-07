@@ -33,7 +33,7 @@ class OpenSkyClient:
         dentro del área geográfica del aeropuerto.
         Devuelve una lista de aeronaves en formato JSON.
         """
-
+        self.last_update = None
         try:
 
             # Comprobar que el aeropuerto está definido
