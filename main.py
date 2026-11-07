@@ -1,15 +1,14 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from config.settings import AIRPORT_CODE, TOTAL_GATES
 from engine.models import Flight
 from engine.simulation import SimulationEngine
-from engine.api_client import OpenSkyClient
-from engine.data_manager import save_aircraft_cache
 from engine.traffic_visualizer import create_traffic_chart
 
 from engine.map_visualizer import (
-    create_aircraft_map,
+    create_historical_aircraft_map,
     open_aircraft_map
 )
 
@@ -26,8 +25,8 @@ from database.repository import (
     save_allocations,
     save_metrics,
     get_simulation_history,
-    save_aircraft_snapshot,
-    get_opensky_history
+    get_opensky_history_by_range,
+    get_aircraft_states_by_range
 )
 
 # DATOS DE PRUEBA
@@ -64,6 +63,54 @@ flights = [
 ]
 
 
+
+# SELECCIÓN DEL INTERVALO TEMPORAL
+
+def get_date_range():
+    """
+    Solicita un intervalo temporal al usuario.
+    Convierte las fechas locales de Madrid a UTC.
+    """
+
+    airport_timezone = ZoneInfo("Europe/Madrid")
+
+    print("\nINTERVALO DE ANÁLISIS")
+    print("--------------------")
+
+    start_input = input(
+        "Fecha y hora de inicio (DD/MM/YYYY HH:MM): "
+    )
+
+    end_input = input(
+        "Fecha y hora de finalización (DD/MM/YYYY HH:MM): "
+    )
+
+    start_date = datetime.strptime(
+        start_input,
+        "%d/%m/%Y %H:%M"
+    ).replace(tzinfo=airport_timezone)
+
+    end_date = datetime.strptime(
+        end_input,
+        "%d/%m/%Y %H:%M"
+    ).replace(tzinfo=airport_timezone)
+
+    if start_date > end_date:
+        raise ValueError(
+            "La fecha de inicio no puede ser posterior "
+            "a la fecha de finalización."
+        )
+
+    start_date = start_date.astimezone(
+        timezone.utc
+    ).isoformat()
+
+    end_date = end_date.astimezone(
+        timezone.utc
+    ).isoformat()
+
+    return start_date, end_date
+
 # EJECUCIÓN PRINCIPAL
 
 def main():
@@ -78,173 +125,210 @@ def main():
 
 
 
-    # OBTENCIÓN DE DATOS REALES DE OPENSKY
 
-    print("\nDATOS EN TIEMPO REAL - OPENSKY")
-    print("------------------------------")
+    # ANÁLISIS HISTÓRICO DE OPENSKY
 
-    opensky_client = OpenSkyClient()
+    print("\nANÁLISIS HISTÓRICO DE TRÁFICO AÉREO")
+    print("----------------------------------")
 
-    aircraft_states = opensky_client.get_flights(AIRPORT_CODE)
+    map_generated = False
 
-    print("Aeronaves recibidas:", len(aircraft_states))
+    try:
 
-    # Obtener la fecha y hora de actualización
-    update_time = opensky_client.get_last_update()
+        start_date, end_date = get_date_range()
 
-    # Guardar los datos recibidos en JSON
-    save_aircraft_cache(
-        AIRPORT_CODE,
-        aircraft_states,
-        update_time
-    )
-
-    # Guardar la captura en la base de datos
-    snapshot_id = save_aircraft_snapshot(
-        AIRPORT_CODE,
-        update_time,
-        aircraft_states
-    )
-
-    print("Captura OpenSky guardada:", snapshot_id)
-
-    # CONSULTA DEL HISTÓRICO DE OPENSKY
-
-    print("\nHISTÓRICO DE TRÁFICO AÉREO")
-    print("-------------------------")
-
-    opensky_history = get_opensky_history()
-
-    for snapshot in opensky_history:
-
-        print(
-            "Captura:", snapshot["snapshot_id"],
-            "| Aeropuerto:", snapshot["airport_code"],
-            "| Fecha:", snapshot["captured_at"],
-            "| Aeronaves:", snapshot["total_aircraft"]
+        # Recuperar las capturas del intervalo
+        opensky_history = get_opensky_history_by_range(
+            start_date,
+            end_date
         )
 
-
-    # GENERACIÓN DE LA GRÁFICA DE TRÁFICO AÉREO
-
-    chart_file = create_traffic_chart(opensky_history)
-
-    if chart_file is not None:
-
-        print("\nGRÁFICA DE TRÁFICO AÉREO")
-        print("------------------------")
-        print("Gráfica generada:", chart_file)
-
-
-
-    # INDICADORES DE TRÁFICO AÉREO
-
-    print("\nINDICADORES DE TRÁFICO AÉREO")
-    print("----------------------------")
-
-    traffic_metrics = calculate_traffic_metrics(opensky_history)
-
-    if traffic_metrics is not None:
-
-        print(
-            "Capturas analizadas:",
-            traffic_metrics["total_snapshots"]
+        # Recuperar las posiciones de las aeronaves
+        aircraft_history = get_aircraft_states_by_range(
+            start_date,
+            end_date
         )
 
-        print(
-            "Media de aeronaves:",
-            traffic_metrics["average_aircraft"]
+    except ValueError as error:
+
+        print(f"Error en el intervalo temporal: {error}")
+
+        opensky_history = []
+        aircraft_history = []
+
+    print("\nRESULTADOS DEL ANÁLISIS")
+    print("-----------------------")
+
+    print("Aeropuerto:", AIRPORT_CODE)
+    print("Capturas recuperadas:", len(opensky_history))
+    print("Registros de aeronaves:", len(aircraft_history))
+
+    if opensky_history:
+
+        # GRÁFICA DE TRÁFICO AÉREO
+
+        chart_file = create_traffic_chart(opensky_history)
+
+        if chart_file is not None:
+
+            print("\nGRÁFICA DE TRÁFICO AÉREO")
+            print("-----------------------")
+            print("Gráfica generada:", chart_file)
+
+        # INDICADORES DE TRÁFICO AÉREO
+
+        print("\nINDICADORES DE TRÁFICO AÉREO")
+        print("----------------------------")
+
+        traffic_metrics = calculate_traffic_metrics(
+            opensky_history
         )
 
-        print(
-            "Máximo de aeronaves:",
-            traffic_metrics["maximum_aircraft"]
-        )
+        if traffic_metrics is not None:
 
-        print(
-            "Mínimo de aeronaves:",
-            traffic_metrics["minimum_aircraft"]
-        )
-
-        print(
-            "Aeronaves en la última captura:",
-            traffic_metrics["latest_aircraft"]
-        )
-
-        variation = traffic_metrics["aircraft_variation"]
-
-        if variation is not None:
             print(
-                "Variación respecto a la captura anterior:",
-                variation,
-                "aeronaves"
+                "Capturas analizadas:",
+                traffic_metrics["total_snapshots"]
             )
+
+            print(
+                "Media de aeronaves:",
+                traffic_metrics["average_aircraft"]
+            )
+
+            print(
+                "Máximo de aeronaves:",
+                traffic_metrics["maximum_aircraft"]
+            )
+
+            print(
+                "Mínimo de aeronaves:",
+                traffic_metrics["minimum_aircraft"]
+            )
+
+            print(
+                "Aeronaves en la última captura:",
+                traffic_metrics["latest_aircraft"]
+            )
+
+            variation = traffic_metrics["aircraft_variation"]
+
+            if variation is not None:
+
+                print(
+                    "Variación respecto a la captura anterior:",
+                    variation,
+                    "aeronaves"
+                )
+
+            else:
+
+                print("No hay capturas anteriores para comparar.")
+
+        # SELECCIONAR LA ÚLTIMA CAPTURA DEL INTERVALO
+
+        latest_snapshot = opensky_history[-1]
+
+        aircraft_states = [
+            aircraft
+            for aircraft in aircraft_history
+            if aircraft["snapshot_id"] == latest_snapshot["snapshot_id"]
+        ]
+
+        update_time = latest_snapshot["captured_at"]
+
+        # AGRUPAR AERONAVES POR CAPTURA HISTÓRICA
+
+        aircraft_by_snapshot = {}
+
+        for snapshot in opensky_history:
+            snapshot_id = snapshot["snapshot_id"]
+
+            aircraft_by_snapshot[snapshot_id] = [
+                aircraft for aircraft in aircraft_history
+                if aircraft["snapshot_id"] == snapshot_id
+            ]
+
+        print("\nCAPTURAS PREPARADAS PARA EL MAPA HISTÓRICO")
+        print("-----------------------------------------")
+
+        for snapshot in opensky_history:
+            snapshot_id = snapshot["snapshot_id"]
+
+            print(
+                f"Captura {snapshot_id}: "
+                f"{len(aircraft_by_snapshot[snapshot_id])} aeronaves"
+            )
+
+
+        # ANÁLISIS OPERACIONAL DE AERONAVES
+
+        classification = classify_aircraft_states(
+            aircraft_states
+        )
+
+        print("\nANÁLISIS OPERACIONAL DE AERONAVES")
+        print("--------------------------------")
+
+        print(
+            "Aeronaves en vuelo:",
+            len(classification["airborne"])
+        )
+
+        print(
+            "Aeronaves en tierra estacionarias:",
+            len(classification["ground_stationary"])
+        )
+
+        print(
+            "Aeronaves en tierra en movimiento:",
+            len(classification["ground_moving"])
+        )
+
+        print(
+            "Aeronaves con estado desconocido:",
+            len(classification["unknown"])
+        )
+
+        # MOSTRAR AERONAVES DE LA ÚLTIMA CAPTURA
+
+        if aircraft_states:
+
+            print("\nAERONAVES DETECTADAS")
+
+            for aircraft in aircraft_states[:10]:
+
+                print(
+                    aircraft["callsign"],
+                    "| ICAO24:", aircraft["icao24"],
+                    "| Latitud:", aircraft["latitude"],
+                    "| Longitud:", aircraft["longitude"],
+                    "| Altitud:", aircraft["altitude"], "m",
+                    "| Velocidad:", aircraft["velocity"], "m/s",
+                    "| En tierra:", aircraft["on_ground"]
+                )
+
+            # MAPA DE LA ÚLTIMA CAPTURA DEL INTERVALO
+
+            map_file, plotted_aircraft = create_historical_aircraft_map(
+                opensky_history,
+                aircraft_history
+            )
+
+            print("\nMAPA DE AERONAVES")
+            print("-----------------")
+            print("Aeronaves representadas:", plotted_aircraft)
+            print("Mapa generado:", map_file)
+
+            map_generated = True
+
         else:
-            print("No hay capturas anteriores para comparar.")
+
+            print("\nNo hay aeronaves para representar en el mapa.")
 
     else:
-        print("No hay datos históricos disponibles.")
 
-
-
-
-    # GENERACIÓN DEL MAPA DE AERONAVES
-
-    map_file, plotted_aircraft = create_aircraft_map(
-        aircraft_states,
-        update_time
-    )
-
-    print("Aeronaves representadas:", plotted_aircraft)
-    print("Mapa generado:", map_file)
-
-    # ANÁLISIS DE ESTADOS DE AERONAVES
-
-    classification = classify_aircraft_states(aircraft_states)
-
-    print("\nANÁLISIS OPERACIONAL DE AERONAVES")
-    print("--------------------------------")
-
-    print(
-        "Aeronaves en vuelo:",
-        len(classification["airborne"])
-    )
-
-    print(
-        "Aeronaves en tierra estacionarias:",
-        len(classification["ground_stationary"])
-    )
-
-    print(
-        "Aeronaves en tierra en movimiento:",
-        len(classification["ground_moving"])
-    )
-
-    print(
-        "Aeronaves con estado desconocido:",
-        len(classification["unknown"])
-    )
-
-
-
-    if aircraft_states:
-
-        print("\nAERONAVES DETECTADAS")
-
-        for aircraft in aircraft_states[:10]:
-
-            print(
-                aircraft["callsign"],
-                "| ICAO24:", aircraft["icao24"],
-                "| Latitud:", aircraft["latitude"],
-                "| Longitud:", aircraft["longitude"],
-                "| Altitud:", aircraft["altitude"], "m",
-                "| Velocidad:", aircraft["velocity"], "m/s",
-                "| En tierra:", aircraft["on_ground"]
-            )
-
-    else:
-        print("No se han recibido datos de aeronaves.")
+        print("\nNo existen capturas en el intervalo seleccionado.")
 
 
 

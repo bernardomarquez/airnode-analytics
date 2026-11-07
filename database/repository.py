@@ -394,3 +394,56 @@ def get_aircraft_states_by_range(start_date, end_date):
 
     finally:
         connection.close()
+
+
+# CONSULTA DE CAPTURAS POR INTERVALO TEMPORAL
+
+def get_opensky_history_by_range(start_date, end_date):
+    """
+    Recupera las capturas de OpenSky comprendidas
+    entre dos fechas y horas.
+    """
+
+    connection = get_connection()
+
+    try:
+
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT
+                snapshot_id,
+                airport_code,
+                captured_at,
+                total_aircraft
+
+            FROM opensky_snapshots
+
+            WHERE captured_at >= ?
+            AND captured_at <= ?
+
+            ORDER BY captured_at ASC
+        """, (
+            start_date,
+            end_date
+        ))
+
+        rows = cursor.fetchall()
+
+        columns = [
+            description[0]
+            for description in cursor.description
+        ]
+
+        history = []
+
+        for row in rows:
+
+            snapshot = dict(zip(columns, row))
+            history.append(snapshot)
+
+        return history
+
+    finally:
+
+        connection.close()
