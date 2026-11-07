@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_bc77a3a311d42e678b5fb47366b167fe {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+    <div style="
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        width: 190px;
+        background-color: white;
+        border: 2px solid #cccccc;
+        z-index: 9999;
+        padding: 10px;
+        border-radius: 6px;
+        font-family: Arial;
+        font-size: 13px;
+    ">
+
+        <b>ESTADO DE LAS AERONAVES</b>
+        <hr style="margin: 6px 0;">
+
+        <p style="margin: 5px;">
+            <span style="color: red;">●</span>
+            En vuelo
+        </p>
+
+        <p style="margin: 5px;">
+            <span style="color: blue;">●</span>
+            En tierra, en movimiento
+        </p>
+
+        <p style="margin: 5px;">
+            <span style="color: green;">●</span>
+            En tierra, estacionada
+        </p>
+
+        <p style="margin: 5px;">
+            <span style="color: gray;">●</span>
+            Estado desconocido
+        </p>
+
+    </div>
+    
+    
+    <div style="
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        width: 230px;
+        background-color: white;
+        border: 1px solid #cccccc;
+        border-radius: 8px;
+        padding: 15px;
+        z-index: 9999;
+        font-family: Arial;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    ">
+
+        <h3 style="margin-top: 0; margin-bottom: 12px;">
+            AIRNODE ANALYTICS
+        </h3>
+
+        <p style="font-size: 13px; color: gray;">
+            MONITORIZACIÓN DE AERONAVES
+        </p>
+
+        <hr>
+
+        <div style="margin-bottom: 12px;">
+            <span style="color: gray;">Aeronaves detectadas</span>
+            <h2 style="margin: 3px 0;">13</h2>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+            <span style="color: red;">●</span>
+            En vuelo
+            <b style="float: right;">8</b>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+            <span style="color: blue;">●</span>
+            En tierra, en movimiento
+            <b style="float: right;">4</b>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+            <span style="color: green;">●</span>
+            En tierra, estacionaria
+            <b style="float: right;">1</b>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+            <span style="color: gray;">●</span>
+            Estado desconocido
+            <b style="float: right;">0</b>
+        </div>
+
+        <hr>
+
+        <p style="font-size: 11px; color: gray; margin-bottom: 8px;">
+            Datos proporcionados por OpenSky Network
+        </p>
+
+        <hr>
+
+        <p style="font-size: 11px; color: gray; margin-bottom: 0;">
+            Última actualización:<br>
+            <b>2026-11-07 17:56:29 UTC</b>
+        </p>
+
+    </div>
+    
+    
+            <div class="folium-map" id="map_bc77a3a311d42e678b5fb47366b167fe" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_bc77a3a311d42e678b5fb47366b167fe = L.map(
+                "map_bc77a3a311d42e678b5fb47366b167fe",
+                {
+                    center: [40.472, -3.56],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_e4f9d0abdc9564ff1f4cae707f0396ab = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_e4f9d0abdc9564ff1f4cae707f0396ab.addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var marker_c7943a18245b083cf076dd5bd24d30c4 = L.marker(
+                [40.4877, -3.5636],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_44c85a1be811b54a447ebecfb7aa36b4 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_8e0912cd48ed45a03d3d81249ba18d68 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b4580c442f467b6e2170b7570e2cf2b2 = $(`<div id="html_b4580c442f467b6e2170b7570e2cf2b2" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 WZZ8CK             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>471f9f</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En tierra, en movimiento</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>No disponible</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>6.2 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_8e0912cd48ed45a03d3d81249ba18d68.setContent(html_b4580c442f467b6e2170b7570e2cf2b2);
+            
+        
+
+        marker_c7943a18245b083cf076dd5bd24d30c4.bindPopup(popup_8e0912cd48ed45a03d3d81249ba18d68)
+        ;
+
+        
+    
+    
+            marker_c7943a18245b083cf076dd5bd24d30c4.bindTooltip(
+                `<div>
+                     WZZ8CK
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c7943a18245b083cf076dd5bd24d30c4.setIcon(icon_44c85a1be811b54a447ebecfb7aa36b4);
+            
+    
+            var marker_6a7dc1d0a014c6249a59be43d1ceb9ce = L.marker(
+                [40.5939, -3.539],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_5048f45bb925efd17fe5407ce0bca1a6 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_1d9b4128bc2c2f0822cedbc8c9fa9caf = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b0ff148d47629abc9f73ab07778b4329 = $(`<div id="html_b0ff148d47629abc9f73ab07778b4329" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 WMT276             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>471dab</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>1569.7 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>99.6 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_1d9b4128bc2c2f0822cedbc8c9fa9caf.setContent(html_b0ff148d47629abc9f73ab07778b4329);
+            
+        
+
+        marker_6a7dc1d0a014c6249a59be43d1ceb9ce.bindPopup(popup_1d9b4128bc2c2f0822cedbc8c9fa9caf)
+        ;
+
+        
+    
+    
+            marker_6a7dc1d0a014c6249a59be43d1ceb9ce.bindTooltip(
+                `<div>
+                     WMT276
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_6a7dc1d0a014c6249a59be43d1ceb9ce.setIcon(icon_5048f45bb925efd17fe5407ce0bca1a6);
+            
+    
+            var marker_5873236219495f686fa2fb5ff3fdbd19 = L.marker(
+                [40.4759, -3.5385],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_3536571552b142148e15240d71d0c2e4 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_1c5f4801842930bd45de450e065fb024 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_88fbc26ad2bb92cb5870325e833b8542 = $(`<div id="html_88fbc26ad2bb92cb5870325e833b8542" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 ANE95NT             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>345388</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>510.5 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>72.6 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_1c5f4801842930bd45de450e065fb024.setContent(html_88fbc26ad2bb92cb5870325e833b8542);
+            
+        
+
+        marker_5873236219495f686fa2fb5ff3fdbd19.bindPopup(popup_1c5f4801842930bd45de450e065fb024)
+        ;
+
+        
+    
+    
+            marker_5873236219495f686fa2fb5ff3fdbd19.bindTooltip(
+                `<div>
+                     ANE95NT
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_5873236219495f686fa2fb5ff3fdbd19.setIcon(icon_3536571552b142148e15240d71d0c2e4);
+            
+    
+            var marker_685a90420154d97001635a543ff95f3b = L.marker(
+                [40.5685, -3.5906],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_d634a90c700194a9b4049bd133eb5ec8 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_2a2c676ed5a2b03f7c223777048923f1 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_400d98dc9be57aa2b6a0607104e36597 = $(`<div id="html_400d98dc9be57aa2b6a0607104e36597" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 IBS15PY             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>343385</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>1303.0 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>88.0 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_2a2c676ed5a2b03f7c223777048923f1.setContent(html_400d98dc9be57aa2b6a0607104e36597);
+            
+        
+
+        marker_685a90420154d97001635a543ff95f3b.bindPopup(popup_2a2c676ed5a2b03f7c223777048923f1)
+        ;
+
+        
+    
+    
+            marker_685a90420154d97001635a543ff95f3b.bindTooltip(
+                `<div>
+                     IBS15PY
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_685a90420154d97001635a543ff95f3b.setIcon(icon_d634a90c700194a9b4049bd133eb5ec8);
+            
+    
+            var marker_25b9cd7ac6a695b0cfe81068f35e89cb = L.marker(
+                [40.4079, -3.6862],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_b99e330ef151c198d60752328a07d942 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_8fdcba53aac744813f12012eca5cbe5d = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_df6ec94d82eead35c434a69a070339f2 = $(`<div id="html_df6ec94d82eead35c434a69a070339f2" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 ANGEL02             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>347457</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>937.3 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>24.5 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_8fdcba53aac744813f12012eca5cbe5d.setContent(html_df6ec94d82eead35c434a69a070339f2);
+            
+        
+
+        marker_25b9cd7ac6a695b0cfe81068f35e89cb.bindPopup(popup_8fdcba53aac744813f12012eca5cbe5d)
+        ;
+
+        
+    
+    
+            marker_25b9cd7ac6a695b0cfe81068f35e89cb.bindTooltip(
+                `<div>
+                     ANGEL02
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_25b9cd7ac6a695b0cfe81068f35e89cb.setIcon(icon_b99e330ef151c198d60752328a07d942);
+            
+    
+            var marker_1d990e70eaa21c232274a19b29d6c88d = L.marker(
+                [40.4704, -3.5613],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_16fa8c0c33c1047bed34e37f99eae312 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_17147ac17fc5a9bc22d53c0d84b09c5d = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_0abda91b4a19af82c280368dd491469c = $(`<div id="html_0abda91b4a19af82c280368dd491469c" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 IBE04SM             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>346204</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>510.5 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>63.4 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_17147ac17fc5a9bc22d53c0d84b09c5d.setContent(html_0abda91b4a19af82c280368dd491469c);
+            
+        
+
+        marker_1d990e70eaa21c232274a19b29d6c88d.bindPopup(popup_17147ac17fc5a9bc22d53c0d84b09c5d)
+        ;
+
+        
+    
+    
+            marker_1d990e70eaa21c232274a19b29d6c88d.bindTooltip(
+                `<div>
+                     IBE04SM
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1d990e70eaa21c232274a19b29d6c88d.setIcon(icon_16fa8c0c33c1047bed34e37f99eae312);
+            
+    
+            var marker_fbdf8e97b5f72283bdee88b58ba35ff2 = L.marker(
+                [40.4646, -3.5681],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_a2ebaf9ab54f6b80c90b17d7ca7df5b1 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_68b10744df94c2ca15abd9460bfd2912 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_4dc8fe83a77cf6a621111f7b238c8e17 = $(`<div id="html_4dc8fe83a77cf6a621111f7b238c8e17" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 RYR197H             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>4cafd1</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En tierra, en movimiento</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>No disponible</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>2.1 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_68b10744df94c2ca15abd9460bfd2912.setContent(html_4dc8fe83a77cf6a621111f7b238c8e17);
+            
+        
+
+        marker_fbdf8e97b5f72283bdee88b58ba35ff2.bindPopup(popup_68b10744df94c2ca15abd9460bfd2912)
+        ;
+
+        
+    
+    
+            marker_fbdf8e97b5f72283bdee88b58ba35ff2.bindTooltip(
+                `<div>
+                     RYR197H
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_fbdf8e97b5f72283bdee88b58ba35ff2.setIcon(icon_a2ebaf9ab54f6b80c90b17d7ca7df5b1);
+            
+    
+            var marker_68113486bb1441c2c64026a209a7e471 = L.marker(
+                [40.4877, -3.5634],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_c725235f93fbec7859642a1bef8ddf83 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_42090d58146e93dd9183328ed1a669db = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_23b43126fd97cf201ddc45493a312965 = $(`<div id="html_23b43126fd97cf201ddc45493a312965" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 ANE48SW             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>348603</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En tierra, en movimiento</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>No disponible</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>7.7 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_42090d58146e93dd9183328ed1a669db.setContent(html_23b43126fd97cf201ddc45493a312965);
+            
+        
+
+        marker_68113486bb1441c2c64026a209a7e471.bindPopup(popup_42090d58146e93dd9183328ed1a669db)
+        ;
+
+        
+    
+    
+            marker_68113486bb1441c2c64026a209a7e471.bindTooltip(
+                `<div>
+                     ANE48SW
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_68113486bb1441c2c64026a209a7e471.setIcon(icon_c725235f93fbec7859642a1bef8ddf83);
+            
+    
+            var marker_cef2c0232a6891f0ce4f38245f53ebcd = L.marker(
+                [40.4691, -3.56],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_a744864ff6fc0207a4432cacced044a4 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_42ddb3813f37107c9b4c86deeeb47cae = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_885e3ea30e62a44f6201021cceee0d21 = $(`<div id="html_885e3ea30e62a44f6201021cceee0d21" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 IBE0060             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>34608e</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>510.5 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>61.2 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_42ddb3813f37107c9b4c86deeeb47cae.setContent(html_885e3ea30e62a44f6201021cceee0d21);
+            
+        
+
+        marker_cef2c0232a6891f0ce4f38245f53ebcd.bindPopup(popup_42ddb3813f37107c9b4c86deeeb47cae)
+        ;
+
+        
+    
+    
+            marker_cef2c0232a6891f0ce4f38245f53ebcd.bindTooltip(
+                `<div>
+                     IBE0060
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_cef2c0232a6891f0ce4f38245f53ebcd.setIcon(icon_a744864ff6fc0207a4432cacced044a4);
+            
+    
+            var marker_a5585e4136dce8ee05235fdd43653f01 = L.marker(
+                [40.4699, -3.5608],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_113f9506825d0c9d5878c0684ff95cce = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_45fa2a92b22cb01de049675f152125cb = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_ec38724a7b81827657e85d5b88527c2d = $(`<div id="html_ec38724a7b81827657e85d5b88527c2d" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 RYR720D             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>4cadc0</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>510.5 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>71.5 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_45fa2a92b22cb01de049675f152125cb.setContent(html_ec38724a7b81827657e85d5b88527c2d);
+            
+        
+
+        marker_a5585e4136dce8ee05235fdd43653f01.bindPopup(popup_45fa2a92b22cb01de049675f152125cb)
+        ;
+
+        
+    
+    
+            marker_a5585e4136dce8ee05235fdd43653f01.bindTooltip(
+                `<div>
+                     RYR720D
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_a5585e4136dce8ee05235fdd43653f01.setIcon(icon_113f9506825d0c9d5878c0684ff95cce);
+            
+    
+            var marker_851ca1e61d783560e60208e19684184a = L.marker(
+                [40.4793, -3.5421],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_9dc796a74a78a320c281ce303776ac9e = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_d158d44034121a748213650a4d3d1ca8 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_df2f55bf59756cec247d0b8c774b2d06 = $(`<div id="html_df2f55bf59756cec247d0b8c774b2d06" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 RYR2FV             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>4cae60</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En vuelo</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>495.3 m</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>75.5 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_d158d44034121a748213650a4d3d1ca8.setContent(html_df2f55bf59756cec247d0b8c774b2d06);
+            
+        
+
+        marker_851ca1e61d783560e60208e19684184a.bindPopup(popup_d158d44034121a748213650a4d3d1ca8)
+        ;
+
+        
+    
+    
+            marker_851ca1e61d783560e60208e19684184a.bindTooltip(
+                `<div>
+                     RYR2FV
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_851ca1e61d783560e60208e19684184a.setIcon(icon_9dc796a74a78a320c281ce303776ac9e);
+            
+    
+            var marker_628040b3c5559b1c02bb59b26a594b7d = L.marker(
+                [40.4657, -3.5684],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_6932b3c92eaa27bfd24dc7e53d205bdb = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "green",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_e6e2e606c83a28b619fc27b227888e97 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_5501b1ecf1df22f70003716ca2d0bcd7 = $(`<div id="html_5501b1ecf1df22f70003716ca2d0bcd7" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 RYR808L             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>4cae62</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En tierra, estacionada</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>No disponible</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>0.0 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_e6e2e606c83a28b619fc27b227888e97.setContent(html_5501b1ecf1df22f70003716ca2d0bcd7);
+            
+        
+
+        marker_628040b3c5559b1c02bb59b26a594b7d.bindPopup(popup_e6e2e606c83a28b619fc27b227888e97)
+        ;
+
+        
+    
+    
+            marker_628040b3c5559b1c02bb59b26a594b7d.bindTooltip(
+                `<div>
+                     RYR808L
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_628040b3c5559b1c02bb59b26a594b7d.setIcon(icon_6932b3c92eaa27bfd24dc7e53d205bdb);
+            
+    
+            var marker_9e8d6acfb12d6915e8a9ce5debc72624 = L.marker(
+                [40.4904, -3.5624],
+                {
+}
+            ).addTo(map_bc77a3a311d42e678b5fb47366b167fe);
+        
+    
+            var icon_b1e4db708b2982586c8101c181ed4967 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_29bb179e9365372127f53315796a2d36 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_eb113744077c60831fe2d5393c857f77 = $(`<div id="html_eb113744077c60831fe2d5393c857f77" style="width: 100.0%; height: 100.0%;">         <div style="width: 220px; font-family: Arial;">             <h4 style="margin-bottom: 8px;">                 DLH09E             </h4>              <table style="width: 100%; font-size: 12px;">                 <tr>                     <td><b>ICAO24</b></td>                     <td>3c66e1</td>                 </tr>                 <tr>                     <td><b>Estado</b></td>                     <td>En tierra, en movimiento</td>                 </tr>                 <tr>                     <td><b>Altitud</b></td>                     <td>No disponible</td>                 </tr>                 <tr>                     <td><b>Velocidad</b></td>                     <td>9.3 m/s</td>                 </tr>             </table>         </div>         </div>`)[0];
+                popup_29bb179e9365372127f53315796a2d36.setContent(html_eb113744077c60831fe2d5393c857f77);
+            
+        
+
+        marker_9e8d6acfb12d6915e8a9ce5debc72624.bindPopup(popup_29bb179e9365372127f53315796a2d36)
+        ;
+
+        
+    
+    
+            marker_9e8d6acfb12d6915e8a9ce5debc72624.bindTooltip(
+                `<div>
+                     DLH09E
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_9e8d6acfb12d6915e8a9ce5debc72624.setIcon(icon_b1e4db708b2982586c8101c181ed4967);
+            
+    
+            map_bc77a3a311d42e678b5fb47366b167fe.fitBounds(
+                [[40.4877, -3.5636], [40.5939, -3.539], [40.4759, -3.5385], [40.5685, -3.5906], [40.4079, -3.6862], [40.4704, -3.5613], [40.4646, -3.5681], [40.4877, -3.5634], [40.4691, -3.56], [40.4699, -3.5608], [40.4793, -3.5421], [40.4657, -3.5684], [40.4904, -3.5624]],
+                {}
+            );
+        
+</script>
+</html>

@@ -1,76 +1,72 @@
 
-from datetime import datetime
 
-from engine.models import Flight
-from engine.simulation import SimulationEngine
-
-
-# Crear vuelos de prueba
-flights = [
-
-    Flight(
-        "IBE123",
-        "MAD",
-        "LHR",
-        datetime(2026, 11, 10, 10, 0),
-        datetime(2026, 11, 10, 11, 0),
-        "A320"
-    ),
-
-    Flight(
-        "IBE456",
-        "MAD",
-        "CDG",
-        datetime(2026, 11, 10, 10, 30),
-        datetime(2026, 11, 10, 12, 0),
-        "A320"
-    ),
-
-    Flight(
-        "IBE789",
-        "MAD",
-        "FRA",
-        datetime(2026, 11, 10, 11, 30),
-        datetime(2026, 11, 10, 12, 30),
-        "A321"
-    )
-]
+from engine.models import HubManager
+from config.settings import TOTAL_GATES, GATE_BUFFER_TIME
 
 
-# Crear el motor de simulación
-simulator = SimulationEngine()
+# =====================================================
+# CLASE: MOTOR DE SIMULACIÓN
+# =====================================================
 
-# Ejecutar la simulación
-results = simulator.run_simulation(flights)
+class SimulationEngine:
 
+    def __init__(self):
 
-# Mostrar resultados
-print("\nAIRNODE ANALYTICS")
-print("========================")
+        # Configuración inicial del aeropuerto
+        self.total_gates = TOTAL_GATES
+        self.buffer_time = GATE_BUFFER_TIME
 
-print("Total de vuelos:", results["total_flights"])
+        # Administrador de puertas
+        self.hub_manager = HubManager(self.total_gates)
 
-print("Vuelos asignados:", results["assigned_flights"])
+    def run_simulation(self, flights):
+        """
+        Ejecuta la simulación de asignación de vuelos
+        a las puertas de embarque disponibles.
+        """
 
-print("Vuelos sin asignar:", results["unassigned_flights"])
+        # Reiniciar las puertas para comenzar una nueva simulación
+        self.hub_manager = HubManager(self.total_gates)
 
+        # Reiniciar las asignaciones anteriores
+        for flight in flights:
+            flight.assigned_gate = None
 
-# Mostrar asignaciones
-print("\nASIGNACIONES")
+        # Ordenar los vuelos según su hora de llegada
+        flights.sort(key=lambda flight: flight.arrival_time)
 
-for flight in results["assigned"]:
+        assigned_flights = []
+        unassigned_flights = []
 
-    print(
-        flight.flight_number,
-        "-> Puerta",
-        flight.assigned_gate
-    )
+        # Procesar cada vuelo
+        for flight in flights:
 
+            # Buscar una puerta disponible
+            gate = self.hub_manager.get_available_gate(
+                flight.arrival_time,
+                flight.departure_time,
+                self.buffer_time
+            )
 
-# Mostrar vuelos sin asignación
-print("\nVUELOS SIN ASIGNAR")
+            if gate is not None:
 
-for flight in results["unassigned"]:
+                # Asignar el vuelo a la puerta encontrada
+                gate.assign_flight(flight)
 
-    print(flight.flight_number)
+                assigned_flights.append(flight)
 
+            else:
+
+                # Registrar el vuelo si no hay puertas disponibles
+                unassigned_flights.append(flight)
+
+        # Calcular los resultados de la simulación
+        results = {
+            "total_flights": len(flights),
+            "assigned_flights": len(assigned_flights),
+            "unassigned_flights": len(unassigned_flights),
+            "assigned": assigned_flights,
+            "unassigned": unassigned_flights
+        }
+
+        return results

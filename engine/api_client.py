@@ -4,9 +4,7 @@ import requests
 from datetime import datetime, timezone
 
 
-# =====================================================
 # CLASE: OPEN SKY CLIENT
-# =====================================================
 
 class OpenSkyClient:
 
@@ -26,6 +24,8 @@ class OpenSkyClient:
 
         # Crear una sesión para realizar peticiones HTTP
         self.session = requests.Session()
+
+        self.last_update = None
 
     def get_flights(self, airport_code="LEMD"):
         """
@@ -57,6 +57,20 @@ class OpenSkyClient:
 
             data = response.json()
 
+            # Guardar la fecha de actualización de OpenSky
+            if data.get("time") is not None:
+
+                self.last_update = datetime.fromtimestamp(
+                    data["time"],
+                    timezone.utc
+                ).isoformat()
+
+            else:
+
+                self.last_update = datetime.now(
+                    timezone.utc
+                ).isoformat()
+
             flights = []
 
             # Comprobar si existen aeronaves disponibles
@@ -67,6 +81,11 @@ class OpenSkyClient:
             # Procesar la información de cada aeronave
             for aircraft in data["states"]:
 
+                # Ignorar aeronaves sin posición geográfica
+                if aircraft[5] is None or aircraft[6] is None:
+
+                    continue
+
                 flight = {
                     "icao24": aircraft[0],
                     "callsign": aircraft[1].strip() if aircraft[1] else "UNKNOWN",
@@ -74,6 +93,7 @@ class OpenSkyClient:
                     "longitude": aircraft[5],
                     "latitude": aircraft[6],
                     "altitude": aircraft[7],
+                    "on_ground": aircraft[8],
                     "velocity": aircraft[9],
                     "last_contact": aircraft[4]
                 }
@@ -96,8 +116,12 @@ class OpenSkyClient:
 
     def get_last_update(self):
         """
-        Devuelve la fecha y hora actual en formato UTC.
+        Devuelve la fecha y hora de actualización de OpenSky
+        en formato UTC.
         """
 
-        return datetime.now(timezone.utc).isoformat()
+        if self.last_update is None:
 
+            return datetime.now(timezone.utc).isoformat()
+
+        return self.last_update

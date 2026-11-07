@@ -1,0 +1,150 @@
+{
+    "airport_code": "LEMD",
+    "last_update": "2026-11-07T17:56:29.283067+00:00",
+    "aircraft_count": 13,
+    "aircraft": [
+        {
+            "icao24": "471f9f",
+            "callsign": "WZZ8CK",
+            "origin_country": "Hungary",
+            "longitude": -3.5636,
+            "latitude": 40.4877,
+            "altitude": null,
+            "on_ground": true,
+            "velocity": 6.17,
+            "last_contact": 1794073930
+        },
+        {
+            "icao24": "471dab",
+            "callsign": "WMT276",
+            "origin_country": "Hungary",
+            "longitude": -3.539,
+            "latitude": 40.5939,
+            "altitude": 1569.72,
+            "on_ground": false,
+            "velocity": 99.64,
+            "last_contact": 1794074183
+        },
+        {
+            "icao24": "345388",
+            "callsign": "ANE95NT",
+            "origin_country": "Spain",
+            "longitude": -3.5385,
+            "latitude": 40.4759,
+            "altitude": 510.54,
+            "on_ground": false,
+            "velocity": 72.64,
+            "last_contact": 1794074183
+        },
+        {
+            "icao24": "343385",
+            "callsign": "IBS15PY",
+            "origin_country": "Spain",
+            "longitude": -3.5906,
+            "latitude": 40.5685,
+            "altitude": 1303.02,
+            "on_ground": false,
+            "velocity": 87.96,
+            "last_contact": 1794074182
+        },
+        {
+            "icao24": "347457",
+            "callsign": "ANGEL02",
+            "origin_country": "Spain",
+            "longitude": -3.6862,
+            "latitude": 40.4079,
+            "altitude": 937.26,
+            "on_ground": false,
+            "velocity": 24.46,
+            "last_contact": 1794074183
+        },
+        {
+            "icao24": "346204",
+            "callsign": "IBE04SM",
+            "origin_country": "Spain",
+            "longitude": -3.5613,
+            "latitude": 40.4704,
+            "altitude": 510.54,
+            "on_ground": false,
+            "velocity": 63.39,
+            "last_contact": 1794073919
+        },
+        {
+            "icao24": "4cafd1",
+            "callsign": "RYR197H",
+            "origin_country": "Ireland",
+            "longitude": -3.5681,
+            "latitude": 40.4646,
+            "altitude": null,
+            "on_ground": true,
+            "velocity": 2.06,
+            "last_contact": 1794073928
+        },
+        {
+            "icao24": "348603",
+            "callsign": "ANE48SW",
+            "origin_country": "Spain",
+            "longitude": -3.5634,
+            "latitude": 40.4877,
+            "altitude": null,
+            "on_ground": true,
+            "velocity": 7.72,
+            "last_contact": 1794073998
+        },
+        {
+            "icao24": "34608e",
+            "callsign": "IBE0060",
+            "origin_country": "Spain",
+            "longitude": -3.56,
+            "latitude": 40.4691,
+            "altitude": 510.54,
+            "on_ground": false,
+            "velocity": 61.23,
+            "last_contact": 1794074178
+        },
+        {
+            "icao24": "4cadc0",
+            "callsign": "RYR720D",
+            "origin_country": "Ireland",
+            "longitude": -3.5608,
+            "latitude": 40.4699,
+            "altitude": 510.54,
+            "on_ground": false,
+            "velocity": 71.52,
+            "last_contact": 1794074028
+        },
+        {
+            "icao24": "4cae60",
+            "callsign": "RYR2FV",
+            "origin_country": "Ireland",
+            "longitude": -3.5421,
+            "latitude": 40.4793,
+            "altitude": 495.3,
+            "on_ground": false,
+            "velocity": 75.53,
+            "last_contact": 1794073956
+        },
+        {
+            "icao24": "4cae62",
+            "callsign": "RYR808L",
+            "origin_country": "Ireland",
+            "longitude": -3.5684,
+            "latitude": 40.4657,
+            "altitude": null,
+            "on_ground": true,
+            "velocity": 0,
+            "last_contact": 1794074167
+        },
+        {
+            "icao24": "3c66e1",
+            "callsign": "DLH09E",
+            "origin_country": "Germany",
+            "longitude": -3.5624,
+            "latitude": 40.4904,
+            "altitude": null,
+            "on_ground": true,
+            "velocity": 9.26,
+            "last_contact": 1794074097
+        }
+    ]
+}
