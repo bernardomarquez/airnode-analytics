@@ -1,4 +1,3 @@
-
 import time
 
 from config.settings import AIRPORT_CODE, COLLECTION_INTERVAL
