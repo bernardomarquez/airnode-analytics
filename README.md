@@ -1,38 +1,51 @@
-# AirNode Analytics – Airport Capacity & Operations Simulation Engine
+# AirNode Analytics – Análisis del Tráfico Aéreo Aeroportuario
 
->  Python simulation engine designed to analyze airport gate availability, model operational turnaround bottlenecks, and project baseline carbon emission metrics during peak traffic hours.
+Aplicación desarrollada en Python para recopilar, almacenar y analizar datos históricos del tráfico aéreo en el entorno del aeropuerto Adolfo Suárez Madrid-Barajas (LEMD), utilizando la API de OpenSky Network.
 
----
+## Descripción del Proyecto
 
-## Business Overview & Value Proposition
+AirNode Analytics proporciona una herramienta de análisis y visualización del tráfico aéreo que permite estudiar la actividad de las aeronaves a lo largo del tiempo.
 
-Major hub airports face severe congestion and ground-handling constraints. **AirNode Analytics** provides an operational simulation framework for aviation consultants to:
-- **Identify Runway & Gate Capacity Bottlenecks:** Detect conflicting flight arrivals before operational failure.
-- **Model Ground Handling Dynamics:** Calculate turnaround delays and gate occupancy rates.
-- **Track ESG & Sustainability Metrics:** Estimate carbon output based on taxi times and aircraft categories.
+La aplicación obtiene información sobre el estado de las aeronaves mediante OpenSky Network, almacena las capturas históricas en una base de datos SQLite y genera un panel interactivo para analizar la evolución del tráfico y la distribución de las aeronaves.
 
----
+### Funcionalidades principales
 
-## Architecture & Core Python Capabilities
+- **Recopilación de datos en tiempo real:** Obtención periódica de información sobre las aeronaves presentes en el área del aeropuerto mediante la API de OpenSky Network.
+- **Almacenamiento histórico:** Registro de capturas y estados individuales de las aeronaves en una base de datos SQLite.
+- **Análisis del tráfico aéreo:** Cálculo de indicadores como el número medio, máximo y mínimo de aeronaves, así como las variaciones entre capturas consecutivas.
+- **Clasificación de estados operacionales:** Identificación de aeronaves en vuelo, estacionarias en tierra, en movimiento en tierra o con estado desconocido.
+- **Mapa histórico interactivo:** Representación geográfica de las aeronaves y visualización de su evolución durante un intervalo temporal seleccionado.
+- **Panel de análisis:** Visualización de tendencias del tráfico, distribución de aeronaves e indicadores operacionales mediante gráficos interactivos.
 
-This project demonstrates production-ready Python patterns and object-oriented architecture:
+## Arquitectura y Tecnologías
 
-- **Object-Oriented Programming (OOP):** Encapsulated models for `Airport`, `Terminal`, `Gate`, and `Flight` hierarchies.
-- **Custom Exception Handling:** Robust error domain tree rooted at `AirportOperationsError` to handle schedule conflicts gracefully.
-- **Memory-Efficient Data Streaming:** Uses Python `generators` (`yield`) to process large daily schedule CSV logs without memory spikes.
-- **Functional Data Processing:** Utilizes `map`, `filter`, and `lambda` functions for quick analytical metrics.
+El proyecto sigue una arquitectura modular en Python que separa la adquisición de datos, el almacenamiento, el análisis y la visualización.
 
----
+### Tecnologías utilizadas
 
-## Quick Start & Example Usage
+- **Python:** Lenguaje principal de desarrollo.
+- **OpenSky Network API:** Fuente de datos sobre el estado de las aeronaves.
+- **SQLite:** Almacenamiento local de capturas históricas y registros de aeronaves.
+- **Folium:** Generación de mapas geográficos interactivos.
+- **HTML, CSS y JavaScript:** Desarrollo de la interfaz del panel de visualización.
+- **Chart.js:** Representación gráfica de la evolución del tráfico y la distribución de aeronaves.
 
-```python
-from airnode.models import Airport, Flight
-from airnode.processor import stream_flight_schedules
+### Estructura del proyecto
 
-# Initialize Airport Hub
-mad_airport = Airport(name="Madrid-Barajas (MAD)", total_gates=15)
-
-# Stream incoming flight schedule
-for flight in stream_flight_schedules("data/sample_schedule.csv"):
-    mad_airport.assign_gate(flight)
+```text
+airnode-analytics/
+├── config/
+│   └── settings.py
+├── database/
+│   ├── connection.py
+│   ├── repository.py
+│   └── schema.sql
+├── engine/
+│   ├── analytics.py
+│   ├── api_client.py
+│   └── map_visualizer.py
+├── outputs/
+├── collector.py
+├── main.py
+├── README.md
+└── requirements.txt

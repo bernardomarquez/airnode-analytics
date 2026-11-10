@@ -1,26 +1,88 @@
-
 import os
 import json
 import functools
 import http.server
 import webbrowser
 import html
+
+from collections import defaultdict
+
 import folium
 
 from config.settings import OUTPUTS_DIR
+from engine.analytics import classify_aircraft_states
 
 
-# MAPA HISTORICO DE AERONAVES
+# CONFIGURACIÓN DE LOS ESTADOS DE LAS AERONAVES
+
+AIRCRAFT_STATES = {
+    "airborne": ("red", "En vuelo"),
+    "ground_moving": ("blue", "En tierra, en movimiento"),
+    "ground_stationary": ("green", "En tierra, estacionada"),
+    "unknown": ("gray", "Estado desconocido")
+}
+
+
+# PREPARACIÓN DE LOS DATOS HISTÓRICOS
+
+def prepare_snapshot_data(opensky_history, aircraft_history):
+    """Agrupa las aeronaves por captura y calcula sus estadísticas."""
+
+    snapshots = sorted(
+        opensky_history,
+        key=lambda snapshot: snapshot["captured_at"]
+    )
+
+    aircraft_by_snapshot = defaultdict(list)
+
+    for aircraft in aircraft_history:
+        aircraft_by_snapshot[aircraft["snapshot_id"]].append(aircraft)
+
+    status_by_aircraft = {}
+    snapshot_information = []
+
+    for snapshot in snapshots:
+        snapshot_id = snapshot["snapshot_id"]
+        aircraft_states = aircraft_by_snapshot[snapshot_id]
+        classification = classify_aircraft_states(aircraft_states)
+
+        counts = {}
+
+        for state, (color, label) in AIRCRAFT_STATES.items():
+            aircraft_group = classification[state]
+            counts[state] = len(aircraft_group)
+
+            for aircraft in aircraft_group:
+                status_by_aircraft[id(aircraft)] = (color, label)
+
+        snapshot_information.append({
+            "date": snapshot["captured_at"],
+            "total": len(aircraft_states),
+            **counts
+        })
+
+    return (
+        snapshots,
+        aircraft_by_snapshot,
+        status_by_aircraft,
+        snapshot_information
+    )
+
+# MAPA HISTÓRICO DE AERONAVES
 
 def create_historical_aircraft_map(opensky_history, aircraft_history):
-    """
-    Genera un mapa histórico con un slider temporal
-    y un panel de estadísticas de aeronaves.
-    """
+    """Genera el mapa histórico y el dashboard de monitorización."""
 
     if not opensky_history:
         print("No hay registros para generar el mapa.")
         return None, 0
+
+    (
+        snapshots,
+        aircraft_by_snapshot,
+        status_by_aircraft,
+        snapshot_information
+    ) = prepare_snapshot_data(opensky_history, aircraft_history)
 
     airport_map = folium.Map(
         location=[40.472, -3.560],
@@ -28,7 +90,7 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         tiles="OpenStreetMap"
     )
 
-    # CABECERA PRINCIPAL DEL DASHBOARD
+    # CABECERA PRINCIPAL
 
     header_html = """
     <div style="
@@ -37,7 +99,7 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         left: 15px;
         width: 395px;
         box-sizing: border-box;
-        background-color: white;
+        background: white;
         padding: 12px 20px;
         border: 1px solid #cccccc;
         border-radius: 8px;
@@ -47,129 +109,62 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         font-family: Arial;
         pointer-events: none;
     ">
-
-        <h2 style="
-            margin: 0;
-            font-size: 22px;
-            letter-spacing: 1px;
-            color: #333333;
-        ">
+        <h2 style="margin: 0; font-size: 22px; letter-spacing: 1px; color: #333;">
             AIRNODE ANALYTICS
         </h2>
 
-        <p style="
-            margin: 5px 0;
-            font-size: 13px;
-            color: #555555;
-            font-weight: bold;
-        ">
+        <p style="margin: 5px 0; font-size: 13px; color: #555; font-weight: bold;">
             AIR TRAFFIC MONITORING & ANALYTICS
         </p>
 
-        <p style="
-            margin: 0;
-            font-size: 10px;
-            color: #888888;
-        ">
-            MADRID-BARAJAS AIRPORT (LEMD) |
-            OPENSKY NETWORK
+        <p style="margin: 0; font-size: 10px; color: #888;">
+            MADRID-BARAJAS AIRPORT (LEMD) | OPENSKY NETWORK
         </p>
 
-        <hr style="
-            margin: 8px 0 5px 0;
-            border: 0;
-            border-top: 1px solid #eeeeee;
-        ">
+        <hr style="margin: 8px 0 5px; border: 0; border-top: 1px solid #eee;">
 
-        <p style="
-            margin: 0;
-            font-size: 10px;
-            color: #777777;
-        ">
+        <p style="margin: 0; font-size: 10px; color: #777;">
             Developed by Bernardo Márquez
         </p>
-
     </div>
     """
 
-    airport_map.get_root().html.add_child(
-        folium.Element(header_html)
-    )
+    airport_map.get_root().html.add_child(folium.Element(header_html))
 
-    snapshots = sorted(
-        opensky_history,
-        key=lambda snapshot: snapshot["captured_at"]
-    )
+    # CARGA DE CHART.JS
 
-    layers = []
-    snapshot_information = []
-
-    # Cargar librería para gráficos
     airport_map.get_root().header.add_child(
         folium.Element(
             '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>'
         )
     )
 
-    # Crear una capa de marcadores por registro
+    # CAPAS DE AERONAVES
+
+    layers = []
+
     for index, snapshot in enumerate(snapshots):
-
         snapshot_id = snapshot["snapshot_id"]
-        captured_at = snapshot["captured_at"]
-
-        aircraft_states = [
-            aircraft for aircraft in aircraft_history
-            if aircraft["snapshot_id"] == snapshot_id
-        ]
 
         aircraft_layer = folium.FeatureGroup(
             name=f"Registro {snapshot_id}",
             show=(index == 0)
         )
 
-        # Contadores de estados
-        airborne = 0
-        ground_moving = 0
-        ground_stationary = 0
-        unknown = 0
-
-        for aircraft in aircraft_states:
-
+        for aircraft in aircraft_by_snapshot[snapshot_id]:
             latitude = aircraft["latitude"]
             longitude = aircraft["longitude"]
 
-            on_ground = aircraft["on_ground"]
-            velocity = aircraft["velocity"]
-
-            # Clasificar la aeronave
-            if on_ground is None:
-                color = "gray"
-                status = "Estado desconocido"
-                unknown += 1
-
-            elif not bool(on_ground):
-                color = "red"
-                status = "En vuelo"
-                airborne += 1
-
-            elif velocity is not None and velocity > 1.5:
-                color = "blue"
-                status = "En tierra, en movimiento"
-                ground_moving += 1
-
-            else:
-                color = "green"
-                status = "En tierra, estacionada"
-                ground_stationary += 1
-
-            # Ignorar aeronaves sin posición
             if latitude is None or longitude is None:
                 continue
+
+            color, status = status_by_aircraft[id(aircraft)]
 
             callsign = html.escape(str(aircraft["callsign"]))
             icao24 = html.escape(str(aircraft["icao24"]))
 
             altitude = aircraft["altitude"]
+            velocity = aircraft["velocity"]
 
             altitude_text = (
                 f"{altitude:.1f} m"
@@ -201,26 +196,17 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         aircraft_layer.add_to(airport_map)
         layers.append(aircraft_layer)
 
-        snapshot_information.append({
-            "date": captured_at,
-            "total": len(aircraft_states),
-            "airborne": airborne,
-            "ground_moving": ground_moving,
-            "ground_stationary": ground_stationary,
-            "unknown": unknown
-        })
+    # DATOS PARA JAVASCRIPT
 
-    # Referencias para JavaScript
-    layer_names = [layer.get_name() for layer in layers]
-    layer_references = ", ".join(layer_names)
+    layer_references = ", ".join(
+        layer.get_name() for layer in layers
+    )
 
     information_json = json.dumps(snapshot_information)
     map_name = airport_map.get_name()
-
     initial = snapshot_information[0]
 
-
-    # INDICADORES KPI DEL DASHBOARD
+    # INDICADORES KPI
 
     average_aircraft = sum(
         snapshot["total"] for snapshot in snapshot_information
@@ -229,8 +215,6 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
     maximum_aircraft = max(
         snapshot["total"] for snapshot in snapshot_information
     )
-
-    total_snapshots = len(snapshot_information)
 
     kpi_html = f"""
     <div style="
@@ -245,7 +229,7 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         font-family: Arial;
         pointer-events: none;
     ">
-
+        {"".join(f'''
         <div style="
             flex: 1;
             box-sizing: border-box;
@@ -257,112 +241,87 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
             box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         ">
             <span style="font-size: 11px; color: gray;">
-                MEDIA DE AERONAVES
+                {label}
             </span>
-            <h2 style="margin: 6px 0; color: #2878B5;">
-                {average_aircraft:.1f}
+            <h2 style="margin: 6px 0; color: {color};">
+                {value}
             </h2>
         </div>
-
-        <div style="
-            flex: 1;
-            box-sizing: border-box;
-            background: white;
-            padding: 12px;
-            border: 1px solid #cccccc;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        ">
-            <span style="font-size: 11px; color: gray;">
-                MÁXIMO REGISTRADO
-            </span>
-            <h2 style="margin: 6px 0; color: #299B50;">
-                {maximum_aircraft}
-            </h2>
-        </div>
-
-        <div style="
-            flex: 1;
-            box-sizing: border-box;
-            background: white;
-            padding: 12px;
-            border: 1px solid #cccccc;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        ">
-            <span style="font-size: 11px; color: gray;">
-                REGISTROS
-            </span>
-            <h2 style="margin: 6px 0; color: #7955A1;">
-                {total_snapshots}
-            </h2>
-        </div>
-
+        ''' for label, value, color in [
+            ("MEDIA DE AERONAVES", f"{average_aircraft:.1f}", "#2878B5"),
+            ("MÁXIMO REGISTRADO", maximum_aircraft, "#299B50"),
+            ("REGISTROS", len(snapshot_information), "#7955A1")
+        ])}
     </div>
     """
 
-    airport_map.get_root().html.add_child(
-        folium.Element(kpi_html)
+    airport_map.get_root().html.add_child(folium.Element(kpi_html))
+
+
+    # ESTILOS COMUNES DEL DASHBOARD
+
+    dashboard_css = """
+    <style>
+        .dashboard-panel {
+            background: white;
+            border: 1px solid #cccccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            font-family: Arial;
+        }
+
+        .dashboard-panel h3 {
+            margin-top: 0;
+        }
+    </style>
+    """
+
+    airport_map.get_root().header.add_child(
+        folium.Element(dashboard_css)
     )
 
-    # Panel de monitorización
+    # PANEL DE MONITORIZACIÓN
+
     statistics_html = f"""
-    <div style="
+    <div class="dashboard-panel" style="
         position: fixed;
         top: 15px;
         right: 20px;
         width: 260px;
-        background: white;
-        border: 1px solid #cccccc;
-        border-radius: 8px;
         padding: 15px;
         z-index: 9999;
-        font-family: Arial;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     ">
         <h3>AIRNODE ANALYTICS</h3>
+
         <p style="font-size: 13px; color: gray;">
             MONITORIZACIÓN DE AERONAVES
         </p>
+
         <hr>
 
         <span>Aeronaves detectadas</span>
         <h2 id="total-aircraft">{initial["total"]}</h2>
 
-        <p style="color: red;">
-            ● En vuelo
-            <b id="airborne" style="float: right;">
-                {initial["airborne"]}
+        {"".join(f'''
+        <p style="color: {color};">
+            ● {label}
+            <b id="{element_id}" style="float: right;">
+                {initial[state]}
             </b>
         </p>
-
-        <p style="color: blue;">
-            ● En tierra, en movimiento
-            <b id="ground-moving" style="float: right;">
-                {initial["ground_moving"]}
-            </b>
-        </p>
-
-        <p style="color: green;">
-            ● En tierra, estacionada
-            <b id="ground-stationary" style="float: right;">
-                {initial["ground_stationary"]}
-            </b>
-        </p>
-
-        <p style="color: gray;">
-            ● Estado desconocido
-            <b id="unknown" style="float: right;">
-                {initial["unknown"]}
-            </b>
-        </p>
+        ''' for state, color, label, element_id in [
+            ("airborne", "red", "En vuelo", "airborne"),
+            ("ground_moving", "blue", "En tierra, en movimiento", "ground-moving"),
+            ("ground_stationary", "green", "En tierra, estacionada", "ground-stationary"),
+            ("unknown", "gray", "Estado desconocido", "unknown")
+        ])}
 
         <hr>
+
         <p style="font-size: 11px; color: gray;">
             Datos proporcionados por OpenSky Network
         </p>
+
         <p style="font-size: 11px;">
             Registro seleccionado:<br>
             <b id="panel-date">{initial["date"]}</b>
@@ -374,24 +333,24 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         folium.Element(statistics_html)
     )
 
-    # Leyenda de colores
+    # LEYENDA DE ESTADOS
+
     legend_html = """
-    <div style="
+    <div class="dashboard-panel" style="
         position: fixed;
         bottom: 15px;
         left: 15px;
         width: 395px;
         box-sizing: border-box;
-        background: white;
-        border: 2px solid #cccccc;
         padding: 10px;
+        border: 2px solid #cccccc;
         border-radius: 6px;
         z-index: 9999;
-        font-family: Arial;
         font-size: 13px;
     ">
         <b>ESTADO DE LAS AERONAVES</b>
         <hr>
+
         <p><span style="color: red;">●</span> En vuelo</p>
         <p><span style="color: blue;">●</span> En movimiento</p>
         <p><span style="color: green;">●</span> Estacionada</p>
@@ -403,30 +362,24 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         folium.Element(legend_html)
     )
 
-    # GRAFICO HISTORICO DE TRAFICO AEREO
+    # GRÁFICO HISTÓRICO DE TRÁFICO AÉREO
 
     chart_html = """
-    <div style="
+    <div class="dashboard-panel" style="
         position: fixed;
         top: 300px;
         left: 15px;
         width: 395px;
         height: 350px;
         box-sizing: border-box;
-        background: white;
         padding: 15px;
-        border: 1px solid #cccccc;
-        border-radius: 8px;
         z-index: 9998;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     ">
-
         <b>DISTRIBUCION HISTORICA DEL TRAFICO AEREO</b>
 
         <div style="width: 100%; height: 305px;">
             <canvas id="traffic-chart"></canvas>
         </div>
-
     </div>
     """
 
@@ -434,39 +387,27 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         folium.Element(chart_html)
     )
 
-
-    # GRAFICO DE DISTRIBUCION OPERACIONAL
+    # GRÁFICO DE DISTRIBUCIÓN OPERACIONAL
 
     distribution_html = """
-    <div style="
+    <div class="dashboard-panel" style="
         position: fixed;
         top: 45%;
         right: 15px;
         width: 260px;
         height: 260px;
-        background: white;
         padding: 15px;
-        border: 1px solid #cccccc;
-        border-radius: 8px;
         z-index: 9998;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        font-family: Arial;
     ">
-
         <b>DISTRIBUCIÓN OPERACIONAL</b>
 
-        <p style="
-            font-size: 11px;
-            color: gray;
-            margin-top: 5px;
-        ">
+        <p style="font-size: 11px; color: gray; margin-top: 5px;">
             Estado de las aeronaves seleccionadas
         </p>
 
         <div style="width: 100%; height: 200px;">
             <canvas id="distribution-chart"></canvas>
         </div>
-
     </div>
     """
 
@@ -474,44 +415,31 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         folium.Element(distribution_html)
     )
 
-    # PANEL DE INTENSIDAD DEL TRAFICO AEREO
+    # PANEL DE INTENSIDAD DEL TRÁFICO
 
     traffic_status_html = """
-    <div style="
+    <div class="dashboard-panel" style="
         position: fixed;
         top: calc(45% + 278px);
         right: 15px;
         width: 260px;
         height: 90px;
-        background: white;
         padding: 12px 15px;
-        border: 1px solid #cccccc;
-        border-radius: 8px;
         z-index: 9998;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        font-family: Arial;
     ">
-
-        <b style="font-size: 13px;">
-            NIVEL DE TRÁFICO AÉREO
-        </b>
+        <b style="font-size: 13px;">NIVEL DE TRÁFICO AÉREO</b>
 
         <h3 id="traffic-level" style="
-            margin: 8px 0 4px 0;
+            margin: 8px 0 4px;
             font-size: 17px;
             color: #299B50;
-        ">
-            TRÁFICO NORMAL
-        </h3>
+        ">TRÁFICO NORMAL</h3>
 
         <p id="traffic-description" style="
             margin: 0;
             font-size: 11px;
             color: gray;
-        ">
-            Actividad dentro de los niveles habituales
-        </p>
-
+        ">Actividad dentro de los niveles habituales</p>
     </div>
     """
 
@@ -522,22 +450,16 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
     # SLIDER TEMPORAL
 
     slider_html = f"""
-    <div style="
+    <div class="dashboard-panel" style="
         position: fixed;
         bottom: 15px;
         left: 425px;
         right: 15px;
         width: auto;
-        background: white;
         padding: 15px 20px;
-        border: 1px solid #cccccc;
-        border-radius: 8px;
         z-index: 9999;
-        font-family: Arial;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     ">
         <b>HISTORIAL DE TRÁFICO AÉREO</b>
-
         <span id="snapshot-date" style="float: right;"></span>
 
         <input
@@ -563,111 +485,78 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
     )
 
 
-    # CONTROL DEL MAPA, SLIDER Y GRAFICO
+    # CONTROL DEL MAPA, SLIDER Y GRÁFICOS
 
     slider_script = f"""
     <script>
     window.addEventListener("load", function() {{
 
-        // Datos del mapa
         const map = {map_name};
         const layers = [{layer_references}];
         const snapshots = {information_json};
-        const initial = snapshots[0];
         const slider = document.getElementById("time-slider");
 
-        
-        // Clasificacion de intensidad del trafico
+        const states = [
+            ["airborne", "En vuelo", "red"],
+            ["ground_moving", "En movimiento", "blue"],
+            ["ground_stationary", "Estacionadas", "green"],
+            ["unknown", "Desconocidas", "gray"]
+        ];
+
+        const stateValues = snapshot => states.map(
+            ([key]) => snapshot[key]
+        );
+
+        // CLASIFICACIÓN DEL TRÁFICO
 
         const averageTraffic = snapshots.reduce(
-            (sum, snapshot) => sum + snapshot.total,
-            0
+            (sum, snapshot) => sum + snapshot.total, 0
         ) / snapshots.length;
 
         function classifyTraffic(total) {{
-
             const ratio = total / Math.max(averageTraffic, 1);
 
             if (ratio < 0.75) {{
-                return {{
-                    level: "TRÁFICO REDUCIDO",
-                    description: "Actividad inferior a la media del periodo",
-                    color: "#2878B5"
-                }};
+                return ["TRÁFICO REDUCIDO", "Actividad inferior a la media", "#2878B5"];
             }}
 
             if (ratio <= 1.25) {{
-                return {{
-                    level: "TRÁFICO NORMAL",
-                    description: "Actividad próxima a la media del periodo",
-                    color: "#299B50"
-                }};
+                return ["TRÁFICO NORMAL", "Actividad próxima a la media", "#299B50"];
             }}
 
             if (ratio <= 1.75) {{
-                return {{
-                    level: "TRÁFICO ELEVADO",
-                    description: "Actividad significativamente superior a la media",
-                    color: "#E69B23"
-                }};
+                return ["TRÁFICO ELEVADO", "Actividad superior a la media", "#E69B23"];
             }}
 
-            return {{
-                level: "TRAFICO MUY ELEVADO",
-                description: "Actividad muy superior a la media del periodo",
-                color: "#D93636"
-            }};
+            return ["TRÁFICO MUY ELEVADO", "Actividad muy superior a la media", "#D93636"];
         }}
 
-        // Crear grafico historico
+        // GRÁFICO HISTÓRICO
+
         const maxAircraft = Math.max(
-            ...snapshots.map(s => s.total),
-            1
+            ...snapshots.map(snapshot => snapshot.total), 1
         );
 
         const chart = new Chart(
             document.getElementById("traffic-chart"),
             {{
                 type: "bar",
-
                 data: {{
-                    labels: snapshots.map(s =>
-                        s.date.replace("T", " ").substring(0, 16)
+                    labels: snapshots.map(snapshot =>
+                        snapshot.date.replace("T", " ").substring(0, 16)
                     ),
-
                     datasets: [
-                        {{
-                            label: "En vuelo",
-                            data: snapshots.map(s => s.airborne),
-                            backgroundColor: "red",
+                        ...states.map(([key, label, color]) => ({{
+                            label,
+                            data: snapshots.map(snapshot => snapshot[key]),
+                            backgroundColor: color,
                             stack: "aircraft",
                             order: 2
-                        }},
-                        {{
-                            label: "En movimiento",
-                            data: snapshots.map(s => s.ground_moving),
-                            backgroundColor: "blue",
-                            stack: "aircraft",
-                            order: 2
-                        }},
-                        {{
-                            label: "Estacionadas",
-                            data: snapshots.map(s => s.ground_stationary),
-                            backgroundColor: "green",
-                            stack: "aircraft",
-                            order: 2
-                        }},
-                        {{
-                            label: "Desconocidas",
-                            data: snapshots.map(s => s.unknown),
-                            backgroundColor: "gray",
-                            stack: "aircraft",
-                            order: 2
-                        }},
+                        }})),
                         {{
                             type: "line",
                             label: "Total de aeronaves",
-                            data: snapshots.map(s => s.total),
+                            data: snapshots.map(snapshot => snapshot.total),
                             borderColor: "black",
                             backgroundColor: "black",
                             borderWidth: 2,
@@ -678,23 +567,18 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
                         }}
                     ]
                 }},
-
                 options: {{
                     responsive: true,
                     maintainAspectRatio: false,
-
                     plugins: {{
                         legend: {{
                             position: "bottom",
                             labels: {{
                                 boxWidth: 10,
-                                font: {{
-                                    size: 10
-                                }}
+                                font: {{ size: 10 }}
                             }}
                         }}
                     }},
-
                     scales: {{
                         x: {{
                             stacked: true,
@@ -705,7 +589,6 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
                                 maxTicksLimit: 8
                             }}
                         }},
-
                         y: {{
                             stacked: true,
                             beginAtZero: true,
@@ -715,7 +598,6 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
                                 text: "Aeronaves"
                             }}
                         }},
-
                         yTotal: {{
                             beginAtZero: true,
                             max: maxAircraft,
@@ -726,53 +608,30 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
             }}
         );
 
-        // Crear grafico circular de distribucion operacional
+        // GRÁFICO DE DISTRIBUCIÓN OPERACIONAL
 
         const stateChart = new Chart(
             document.getElementById("distribution-chart"),
             {{
                 type: "doughnut",
-
                 data: {{
-                    labels: [
-                        "En vuelo",
-                        "En movimiento",
-                        "Estacionadas",
-                        "Desconocidas"
-                    ],
-
+                    labels: states.map(([, label]) => label),
                     datasets: [{{
-                        data: [
-                            initial.airborne,
-                            initial.ground_moving,
-                            initial.ground_stationary,
-                            initial.unknown
-                        ],
-
-                        backgroundColor: [
-                            "red",
-                            "blue",
-                            "green",
-                            "gray"
-                        ],
-
+                        data: stateValues(snapshots[0]),
+                        backgroundColor: states.map(([, , color]) => color),
                         borderWidth: 2,
                         borderColor: "white"
                     }}]
                 }},
-
                 options: {{
                     responsive: true,
                     maintainAspectRatio: false,
-
                     plugins: {{
                         legend: {{
                             position: "bottom",
                             labels: {{
                                 boxWidth: 10,
-                                font: {{
-                                    size: 10
-                                }}
+                                font: {{ size: 10 }}
                             }}
                         }}
                     }}
@@ -780,12 +639,11 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
             }}
         );
 
-        
-        // Actualizar mapa y estadisticas
-        function updateSnapshot(index) {{
+        // ACTUALIZACIÓN DEL REGISTRO SELECCIONADO
 
-            layers.forEach((layer, i) => {{
-                if (i === index) {{
+        function updateSnapshot(index) {{
+            layers.forEach((layer, layerIndex) => {{
+                if (layerIndex === index) {{
                     map.addLayer(layer);
                 }} else {{
                     map.removeLayer(layer);
@@ -793,62 +651,51 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
             }});
 
             const snapshot = snapshots[index];
+            const formattedDate = snapshot.date.replace("T", " ");
 
             document.getElementById("snapshot-date").textContent =
-                snapshot.date.replace("T", " ");
+                formattedDate;
 
-        // Actualizar estado de intensidad del trafico
-
-        const trafficStatus = classifyTraffic(snapshot.total);
-
-        document.getElementById("traffic-level").textContent =
-            trafficStatus.level;
-
-        document.getElementById("traffic-level").style.color =
-            trafficStatus.color;
-
-        document.getElementById("traffic-description").textContent =
-            trafficStatus.description;
+            document.getElementById("panel-date").textContent =
+                formattedDate;
 
             document.getElementById("snapshot-count").textContent =
-                "Registro " + (index + 1) + " de " + snapshots.length;
+                `Registro ${{index + 1}} de ${{snapshots.length}}`;
 
             document.getElementById("total-aircraft").textContent =
                 snapshot.total;
 
-            document.getElementById("airborne").textContent =
-                snapshot.airborne;
-
-            document.getElementById("ground-moving").textContent =
-                snapshot.ground_moving;
-
-            document.getElementById("ground-stationary").textContent =
-                snapshot.ground_stationary;
-
-            document.getElementById("unknown").textContent =
-                snapshot.unknown;
-                
-            document.getElementById("panel-date").textContent =
-                snapshot.date.replace("T", " ");
-
-            // Actualizar distribucion operacional
-
-            stateChart.data.datasets[0].data = [
-                snapshot.airborne,
-                snapshot.ground_moving,
-                snapshot.ground_stationary,
-                snapshot.unknown
+            const states = [
+                ["airborne", "En vuelo", "red", "airborne"],
+                ["ground_moving", "En movimiento", "blue", "ground-moving"],
+                ["ground_stationary", "Estacionadas", "green", "ground-stationary"],
+                ["unknown", "Desconocidas", "gray", "unknown"]
             ];
 
+                document.getElementById(elementId).textContent =
+                    snapshot[key];
+            }});
+
+            const [level, description, color] =
+                classifyTraffic(snapshot.total);
+
+            document.getElementById("traffic-level").textContent = level;
+            document.getElementById("traffic-level").style.color = color;
+
+            document.getElementById("traffic-description").textContent =
+                description;
+
+            stateChart.data.datasets[0].data = stateValues(snapshot);
             stateChart.update();
         }}
 
+        // CONTROL DEL SLIDER
+
         slider.addEventListener("input", function() {{
-            updateSnapshot(parseInt(this.value));
+            updateSnapshot(Number(this.value));
         }});
 
         updateSnapshot(0);
-
     }});
     </script>
     """
@@ -857,7 +704,8 @@ def create_historical_aircraft_map(opensky_history, aircraft_history):
         folium.Element(slider_script)
     )
 
-    # Guardar mapa
+    # GUARDAR MAPA
+
     os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
     output_file = os.path.join(
@@ -894,7 +742,9 @@ def open_aircraft_map():
         handler
     )
 
-    map_url = f"http://127.0.0.1:{server.server_port}/aircraft_map.html"
+    map_url = (
+        f"http://127.0.0.1:{server.server_port}/aircraft_map.html"
+    )
 
     print("\nAbriendo mapa de AirNode Analytics...")
     print("Pulsa Ctrl + C para cerrar el servidor.")
@@ -903,9 +753,7 @@ def open_aircraft_map():
 
     try:
         server.serve_forever()
-
     except KeyboardInterrupt:
         print("\nServidor de mapas detenido.")
-
     finally:
         server.server_close()
