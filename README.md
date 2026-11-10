@@ -19,7 +19,7 @@ La aplicación obtiene información sobre el estado de las aeronaves mediante Op
 
 ## Arquitectura y Tecnologías
 
-El proyecto sigue una arquitectura modular en Python que separa la adquisición de datos, el almacenamiento, el análisis y la visualización.
+El proyecto sigue una arquitectura modular en Python que separa la obtención de datos, el almacenamiento, el análisis y la visualización.
 
 ### Tecnologías utilizadas
 
