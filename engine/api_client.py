@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timezone
 
 
-class OpenSky_Data:
+class OpenSkyClient::
     """Cliente para obtener datos de aeronaves desde OpenSky."""
 
     BASE_URL = "https://opensky-network.org/api/states/all"
